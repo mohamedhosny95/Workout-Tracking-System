@@ -1,6 +1,6 @@
 import logging
 import sys
-from telegram import Update
+from telegram import Update, BotCommand
 from telegram.ext import Application, CommandHandler
 import config
 from handlers.log_workout import log_conv_handler
@@ -44,6 +44,21 @@ def main() -> None:
     app.add_handler(exercises_handler)          # CommandHandler
     app.add_handler(history_handler)            # CommandHandler
     app.add_handler(summary_handler)            # CommandHandler
+
+    # Register the command menu shown in Telegram's "/" tab
+    commands = [
+        BotCommand("start",       "Welcome message & command list"),
+        BotCommand("log",         "Log a workout exercise"),
+        BotCommand("template",    "Start a session from a saved template"),
+        BotCommand("exercises",   "Browse or search the exercise library"),
+        BotCommand("add_exercise","Add a new exercise to the library"),
+        BotCommand("history",     "Last 7 days of logged workouts"),
+        BotCommand("summary",     "Weekly stats: volume, sets, muscle groups"),
+        BotCommand("cancel",      "Cancel any active flow"),
+    ]
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(app.bot.set_my_commands(commands))
+    logger.info("Command menu registered.")
 
     logger.info("Bot is running.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
