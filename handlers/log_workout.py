@@ -102,14 +102,14 @@ async def list_all(update: Update, context) -> int:
         await update.message.reply_text("No exercises in the library yet. Use /add_exercise to create one.")
         return SEARCH_EXERCISE
 
-    results = results[:20]
+    results = results[:50]
     context.user_data[_RESULTS] = results
     keyboard = [
         [InlineKeyboardButton(f"{i+1}. {r['name']}", callback_data=str(i))]
         for i, r in enumerate(results)
     ]
     await update.message.reply_text(
-        "Exercise library (first 20):",
+        f"Exercise library ({len(results)} shown):",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
     return SELECT_EXERCISE

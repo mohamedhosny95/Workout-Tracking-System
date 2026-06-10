@@ -66,26 +66,37 @@ async def _search_and_show(update: Update, query: str) -> None:
         )
         return
 
-    lines = [header]
-    for ex in results[:20]:
+    chunks: list[str] = [header]
+    current_chunk: list[str] = []
+
+    for ex in results:
         cat = ex.get("category") or "—"
         pattern = ex.get("movement_pattern") or "—"
-        compound = " ·  Compound" if ex.get("is_compound") else ""
+        compound = " · Compound" if ex.get("is_compound") else ""
         default_sets = ex.get("default_sets")
         default_reps = ex.get("default_reps")
         default_unit = ex.get("default_unit") or "kg"
         defaults_str = ""
         if default_sets and default_reps:
             defaults_str = f" · {int(default_sets)}×{int(default_reps)} @ {default_unit}"
-        lines.append(
+        entry = (
             f"\n*{ex['name']}*\n"
             f"  {cat} · {pattern}{compound}{defaults_str}"
         )
+        current_chunk.append(entry)
 
-    if len(results) > 20:
-        lines.append(f"\n_…and {len(results) - 20} more. Refine your search._")
+        # Send current chunk before hitting Telegram's 4096-char limit
+        if sum(len(e) for e in current_chunk) > 3500:
+            await update.message.reply_text(
+                "\n".join(chunks + current_chunk[:-1]), parse_mode="Markdown"
+            )
+            chunks = []
+            current_chunk = [current_chunk[-1]]
 
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    if current_chunk or chunks:
+        await update.message.reply_text(
+            "\n".join(chunks + current_chunk), parse_mode="Markdown"
+        )
 
 
 # ---------------------------------------------------------------------------
