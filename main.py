@@ -8,7 +8,7 @@ from telegram.ext import (
 )
 import config
 from handlers.log_workout import log_conv_handler
-from handlers.exercises import exercises_handler, add_exercise_handler
+from handlers.exercises import exercises_handler, add_exercise_handler  # add_exercise_handler is a ConversationHandler
 from handlers.history import history_handler
 from handlers.templates import template_conv_handler
 from handlers.summary import summary_handler
