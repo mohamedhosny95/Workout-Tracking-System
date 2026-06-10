@@ -1,0 +1,36 @@
+name: Workout Bot
+
+on:
+  schedule:
+    - cron: "0 */5 * * *"   # restart every 5 hours (before 6h job limit)
+  workflow_dispatch:          # manual trigger from GitHub Actions tab
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350      # ~5h 50min — safely under GitHub's 6h limit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_EXERCISE_LIBRARY_DB_ID: ${{ secrets.NOTION_EXERCISE_LIBRARY_DB_ID }}
+          NOTION_EXERCISE_LOGS_DB_ID: ${{ secrets.NOTION_EXERCISE_LOGS_DB_ID }}
+          NOTION_WORKOUT_SESSION_DB_ID: ${{ secrets.NOTION_WORKOUT_SESSION_DB_ID }}
+          NOTION_WORKOUT_TEMPLATES_DB_ID: ${{ secrets.NOTION_WORKOUT_TEMPLATES_DB_ID }}
+          NOTION_PERSONAL_RECORDS_DB_ID: ${{ secrets.NOTION_PERSONAL_RECORDS_DB_ID }}
+          NOTION_BODY_METRICS_DB_ID: ${{ secrets.NOTION_BODY_METRICS_DB_ID }}
+        run: python main.py
