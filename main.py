@@ -1,14 +1,10 @@
 import logging
 import sys
 from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ConversationHandler,
-)
+from telegram.ext import Application, CommandHandler
 import config
 from handlers.log_workout import log_conv_handler
-from handlers.exercises import exercises_handler, add_exercise_handler  # add_exercise_handler is a ConversationHandler
+from handlers.exercises import exercises_handler, add_exercise_handler
 from handlers.history import history_handler
 from handlers.templates import template_conv_handler
 from handlers.summary import summary_handler
@@ -42,12 +38,12 @@ def main() -> None:
     app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(log_conv_handler)
-    app.add_handler(template_conv_handler)
-    app.add_handler(CommandHandler("exercises", exercises_handler))
-    app.add_handler(CommandHandler("add_exercise", add_exercise_handler))
-    app.add_handler(CommandHandler("history", history_handler))
-    app.add_handler(CommandHandler("summary", summary_handler))
+    app.add_handler(log_conv_handler)           # ConversationHandler
+    app.add_handler(template_conv_handler)      # ConversationHandler
+    app.add_handler(add_exercise_handler)       # ConversationHandler
+    app.add_handler(exercises_handler)          # CommandHandler
+    app.add_handler(history_handler)            # CommandHandler
+    app.add_handler(summary_handler)            # CommandHandler
 
     logger.info("Bot is running.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
