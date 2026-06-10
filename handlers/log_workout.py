@@ -123,7 +123,11 @@ async def select_exercise(update: Update, context) -> int:
     query = update.callback_query
     await query.answer()
     idx = int(query.data)
-    exercise = context.user_data[_RESULTS][idx]
+    results = context.user_data.get(_RESULTS, [])
+    if idx < 0 or idx >= len(results):
+        await query.message.reply_text("Selection expired. Please search again.")
+        return SEARCH_EXERCISE
+    exercise = results[idx]
     context.user_data[_EXERCISE] = exercise
     await query.edit_message_reply_markup(reply_markup=None)
     await query.message.reply_text(f"Selected: *{exercise['name']}*", parse_mode="Markdown")

@@ -77,7 +77,12 @@ async def select_template(update: Update, context) -> int:
     await query.edit_message_reply_markup(reply_markup=None)
 
     idx = int(query.data.split(":")[1])
-    template = context.user_data[_EXERCISES][idx]
+    templates = context.user_data[_EXERCISES]
+    if idx < 0 or idx >= len(templates):
+        await query.message.reply_text("Invalid selection. Please try /template again.")
+        _clear_session(context)
+        return ConversationHandler.END
+    template = templates[idx]
     context.user_data[_TEMPLATE] = template
 
     if not template["exercise_ids"]:
@@ -94,6 +99,14 @@ async def select_template(update: Update, context) -> int:
         exercises = ns.get_exercises_by_ids(template["exercise_ids"])
     except Exception:
         await query.message.reply_text("⚠️ Couldn't load exercises. Try again.")
+        return ConversationHandler.END
+
+    if not exercises:
+        await query.message.reply_text(
+            f"Couldn't load exercises for *{template['name']}*.\nCheck that exercises are linked in Notion.",
+            parse_mode="Markdown",
+        )
+        _clear_session(context)
         return ConversationHandler.END
 
     context.user_data[_EXERCISES] = exercises

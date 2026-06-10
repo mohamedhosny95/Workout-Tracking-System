@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def _fmt_date(date_str: str) -> str:
     """'2025-06-10' → 'Tue Jun 10'"""
     try:
-        return datetime.strptime(date_str, "%Y-%m-%d").strftime("%a %b %-d")
+        return datetime.strptime(date_str, "%Y-%m-%d").strftime("%a %b %d").replace(" 0", " ")
     except Exception:
         return date_str
 

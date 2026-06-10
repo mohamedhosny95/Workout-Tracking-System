@@ -347,10 +347,13 @@ def get_recent_logs(days: int = 7) -> list[dict]:
 def _parse_log_entry(page: dict) -> dict:
     exercise_ids = _relation_ids(page, "Exercise Library")
     session_ids = _relation_ids(page, "Workout")
-    rollup_date = page["properties"].get("Date", {}).get("rollup", {})
+    rollup_prop = page["properties"].get("Date", {})
+    rollup_date = rollup_prop.get("rollup", {}) if isinstance(rollup_prop, dict) else {}
     date_val = None
-    if rollup_date.get("type") == "date" and rollup_date.get("date"):
-        date_val = rollup_date["date"].get("start")
+    if isinstance(rollup_date, dict) and rollup_date.get("type") == "date":
+        date_obj = rollup_date.get("date")
+        if isinstance(date_obj, dict):
+            date_val = date_obj.get("start")
 
     return {
         "id": page["id"],

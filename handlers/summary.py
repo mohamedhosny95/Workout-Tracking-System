@@ -106,8 +106,8 @@ async def summary_handler(update: Update, context) -> None:
     # Date range label
     # -----------------------------------------------------------------------
     now = datetime.now(timezone.utc)
-    week_start = (now - timedelta(days=6)).strftime("%b %-d")
-    week_end = now.strftime("%b %-d")
+    week_start = (now - timedelta(days=6)).strftime("%b %d").replace(" 0", " ")
+    week_end = now.strftime("%b %d").replace(" 0", " ")
 
     # -----------------------------------------------------------------------
     # Build message
