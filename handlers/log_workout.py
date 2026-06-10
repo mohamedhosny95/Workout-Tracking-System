@@ -62,14 +62,20 @@ async def log_start(update: Update, context) -> int:
 async def search_exercise(update: Update, context) -> int:
     query = update.message.text.strip()
     try:
-        results = ns.search_exercises(query)
+        if len(query) <= 2:
+            all_ex = ns.get_all_exercises()
+            q_lower = query.lower()
+            results = [e for e in all_ex if q_lower in e["name"].lower()]
+        else:
+            results = ns.search_exercises(query)
     except Exception:
         await update.message.reply_text("⚠️ Couldn't reach Notion. Try again.")
         return SEARCH_EXERCISE
 
     if not results:
         await update.message.reply_text(
-            "Not found. Try a different name, or type /add to create it."
+            f"No exercises found for *{query}*.\nTry a different letter/name, or /list to browse all.",
+            parse_mode="Markdown",
         )
         return SEARCH_EXERCISE
 
