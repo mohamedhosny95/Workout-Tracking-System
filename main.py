@@ -16,6 +16,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+COMMANDS = [
+    BotCommand("start",        "Welcome message & command list"),
+    BotCommand("log",          "Log a workout exercise"),
+    BotCommand("template",     "Start a session from a saved template"),
+    BotCommand("exercises",    "Browse or search the exercise library"),
+    BotCommand("add_exercise", "Add a new exercise to the library"),
+    BotCommand("history",      "Last 7 days of logged workouts"),
+    BotCommand("summary",      "Weekly stats: volume, sets, muscle groups"),
+    BotCommand("cancel",       "Cancel any active flow"),
+]
+
+
+async def post_init(app: Application) -> None:
+    """Runs after the bot connects — registers the command menu."""
+    await app.bot.set_my_commands(COMMANDS)
+    logger.info("Command menu registered.")
+
 
 async def start(update: Update, context) -> None:
     text = (
@@ -35,30 +52,20 @@ async def start(update: Update, context) -> None:
 def main() -> None:
     logger.info("Starting Workout Bot (polling mode)...")
 
-    app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(config.TELEGRAM_BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(log_conv_handler)           # ConversationHandler
-    app.add_handler(template_conv_handler)      # ConversationHandler
-    app.add_handler(add_exercise_handler)       # ConversationHandler
-    app.add_handler(exercises_handler)          # CommandHandler
-    app.add_handler(history_handler)            # CommandHandler
-    app.add_handler(summary_handler)            # CommandHandler
-
-    # Register the command menu shown in Telegram's "/" tab
-    commands = [
-        BotCommand("start",       "Welcome message & command list"),
-        BotCommand("log",         "Log a workout exercise"),
-        BotCommand("template",    "Start a session from a saved template"),
-        BotCommand("exercises",   "Browse or search the exercise library"),
-        BotCommand("add_exercise","Add a new exercise to the library"),
-        BotCommand("history",     "Last 7 days of logged workouts"),
-        BotCommand("summary",     "Weekly stats: volume, sets, muscle groups"),
-        BotCommand("cancel",      "Cancel any active flow"),
-    ]
-    import asyncio
-    asyncio.get_event_loop().run_until_complete(app.bot.set_my_commands(commands))
-    logger.info("Command menu registered.")
+    app.add_handler(log_conv_handler)       # ConversationHandler
+    app.add_handler(template_conv_handler)  # ConversationHandler
+    app.add_handler(add_exercise_handler)   # ConversationHandler
+    app.add_handler(exercises_handler)      # CommandHandler
+    app.add_handler(history_handler)        # CommandHandler
+    app.add_handler(summary_handler)        # CommandHandler
 
     logger.info("Bot is running.")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

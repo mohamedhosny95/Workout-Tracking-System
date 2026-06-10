@@ -66,8 +66,7 @@ async def _search_and_show(update: Update, query: str) -> None:
         )
         return
 
-    chunks: list[str] = [header]
-    current_chunk: list[str] = []
+    current_lines: list[str] = [header]
 
     for ex in results:
         cat = ex.get("category") or "—"
@@ -83,19 +82,19 @@ async def _search_and_show(update: Update, query: str) -> None:
             f"\n*{ex['name']}*\n"
             f"  {cat} · {pattern}{compound}{defaults_str}"
         )
-        current_chunk.append(entry)
 
-        # Send current chunk before hitting Telegram's 4096-char limit
-        if sum(len(e) for e in current_chunk) > 3500:
+        # Flush before exceeding Telegram's 4096-char limit
+        if sum(len(l) for l in current_lines) + len(entry) > 3800:
             await update.message.reply_text(
-                "\n".join(chunks + current_chunk[:-1]), parse_mode="Markdown"
+                "\n".join(current_lines), parse_mode="Markdown"
             )
-            chunks = []
-            current_chunk = [current_chunk[-1]]
+            current_lines = [header]  # keep header on every page
 
-    if current_chunk or chunks:
+        current_lines.append(entry)
+
+    if current_lines:
         await update.message.reply_text(
-            "\n".join(chunks + current_chunk), parse_mode="Markdown"
+            "\n".join(current_lines), parse_mode="Markdown"
         )
 
 
