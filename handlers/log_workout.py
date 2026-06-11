@@ -20,6 +20,8 @@ SEARCH_EXERCISE, SELECT_EXERCISE, SETS, REPS, WEIGHT, RPE, CONFIRM = range(7)
 
 # context.user_data keys
 _RESULTS = "log_results"
+_LIST_PAGE = "log_list_page"
+_PENDING_NAME = "log_pending_name"
 _EXERCISE = "log_exercise"
 _SETS = "log_sets"
 _REPS = "log_reps"
@@ -28,6 +30,8 @@ _UNIT = "log_unit"
 _RPE = "log_rpe"
 _SESSION_ID = "log_session_id"
 _SESSION_DATE = "log_session_date"
+
+_PAGE_SIZE = 20
 
 
 # ---------------------------------------------------------------------------
@@ -73,11 +77,19 @@ async def search_exercise(update: Update, context) -> int:
         return SEARCH_EXERCISE
 
     if not results:
+        context.user_data[_PENDING_NAME] = query
+        keyboard = [
+            [
+                InlineKeyboardButton(f"➕ Create & log \"{query}\"", callback_data="quickadd:yes"),
+                InlineKeyboardButton("🔍 Try again", callback_data="quickadd:no"),
+            ]
+        ]
         await update.message.reply_text(
-            f"No exercises found for *{query}*.\nTry a different letter/name, or /list to browse all.",
+            f"No exercises found for *{query}*.\nCreate it now and log it straight away?",
             parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
-        return SEARCH_EXERCISE
+        return SELECT_EXERCISE
 
     if len(results) == 1:
         context.user_data[_EXERCISE] = results[0]
@@ -87,7 +99,7 @@ async def search_exercise(update: Update, context) -> int:
     results = results[:10]
     context.user_data[_RESULTS] = results
     keyboard = [
-        [InlineKeyboardButton(f"{i+1}. {r['name']}", callback_data=str(i))]
+        [InlineKeyboardButton(r["name"], callback_data=str(i))]
         for i, r in enumerate(results)
     ]
     await update.message.reply_text(
@@ -99,26 +111,95 @@ async def search_exercise(update: Update, context) -> int:
 
 async def list_all(update: Update, context) -> int:
     try:
-        results = ns.get_all_exercises()
+        all_results = ns.get_all_exercises()
     except Exception:
         await update.message.reply_text("⚠️ Couldn't reach Notion. Try again.")
         return SEARCH_EXERCISE
 
-    if not results:
+    if not all_results:
         await update.message.reply_text("No exercises in the library yet. Use /add_exercise to create one.")
         return SEARCH_EXERCISE
 
-    results = results[:50]
-    context.user_data[_RESULTS] = results
+    context.user_data[_RESULTS] = all_results
+    context.user_data[_LIST_PAGE] = 0
+    return await _show_list_page(update.message, context)
+
+
+async def _show_list_page(message, context) -> int:
+    all_results = context.user_data[_RESULTS]
+    page = context.user_data.get(_LIST_PAGE, 0)
+    total = len(all_results)
+    start = page * _PAGE_SIZE
+    end = min(start + _PAGE_SIZE, total)
+    page_results = all_results[start:end]
+
     keyboard = [
-        [InlineKeyboardButton(f"{i+1}. {r['name']}", callback_data=str(i))]
-        for i, r in enumerate(results)
+        [InlineKeyboardButton(r["name"], callback_data=str(start + i))]
+        for i, r in enumerate(page_results)
     ]
-    await update.message.reply_text(
-        f"Exercise library ({len(results)} shown):",
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ Prev", callback_data=f"page:{page - 1}"))
+    if end < total:
+        nav.append(InlineKeyboardButton("➡️ Next", callback_data=f"page:{page + 1}"))
+    if nav:
+        keyboard.append(nav)
+
+    await message.reply_text(
+        f"Exercise library — page {page + 1} of {-(-total // _PAGE_SIZE)} ({total} total):",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
     return SELECT_EXERCISE
+
+
+async def list_page_callback(update: Update, context) -> int:
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_reply_markup(reply_markup=None)
+    page = int(query.data.split(":")[1])
+    context.user_data[_LIST_PAGE] = page
+    return await _show_list_page(query.message, context)
+
+
+async def quickadd_callback(update: Update, context) -> int:
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_reply_markup(reply_markup=None)
+
+    if query.data == "quickadd:no":
+        context.user_data.pop(_PENDING_NAME, None)
+        await query.message.reply_text("OK — type a name to search again.")
+        return SEARCH_EXERCISE
+
+    name = context.user_data.pop(_PENDING_NAME, None)
+    if not name:
+        await query.message.reply_text("Something went wrong. Type a name to search again.")
+        return SEARCH_EXERCISE
+
+    try:
+        ex_id = ns.add_exercise(
+            name=name,
+            category=None,
+            muscle_group_ids=[],
+            description=None,
+            default_sets=None,
+            default_reps=None,
+            default_unit="kg",
+        )
+    except Exception:
+        await query.message.reply_text("⚠️ Couldn't save to Notion. Try again.")
+        return SEARCH_EXERCISE
+
+    # Fetch the newly created exercise so we have all its fields
+    try:
+        exs = ns.get_exercises_by_ids([ex_id])
+        exercise = exs[0] if exs else {"id": ex_id, "name": name}
+    except Exception:
+        exercise = {"id": ex_id, "name": name}
+
+    context.user_data[_EXERCISE] = exercise
+    await query.message.reply_text(f"✅ *{name}* added to the library!", parse_mode="Markdown")
+    return await ask_sets(query.message, context)
 
 
 # ---------------------------------------------------------------------------
@@ -412,7 +493,7 @@ async def cancel(update: Update, context) -> int:
 # ---------------------------------------------------------------------------
 
 def _clear_entry(context) -> None:
-    for key in (_RESULTS, _EXERCISE, _SETS, _REPS, _WEIGHT, _UNIT, _RPE):
+    for key in (_RESULTS, _LIST_PAGE, _PENDING_NAME, _EXERCISE, _SETS, _REPS, _WEIGHT, _UNIT, _RPE):
         context.user_data.pop(key, None)
 
 
@@ -434,6 +515,8 @@ log_conv_handler = ConversationHandler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, search_exercise),
         ],
         SELECT_EXERCISE: [
+            CallbackQueryHandler(quickadd_callback, pattern=r"^quickadd:"),
+            CallbackQueryHandler(list_page_callback, pattern=r"^page:"),
             CallbackQueryHandler(select_exercise, pattern=r"^\d+$"),
         ],
         SETS: [
