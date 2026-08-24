@@ -1,8 +1,6 @@
 name: Workout Bot
 
 on:
-  schedule:
-    - cron: "0 */5 * * *"   # restart every 5 hours (before 6h job limit)
   workflow_dispatch:          # manual trigger from GitHub Actions tab
 
 jobs:
