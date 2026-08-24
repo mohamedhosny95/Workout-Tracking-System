@@ -1,9 +1,10 @@
 name: Workout Bot
 
+# Manually-triggered only. Automatic schedule trigger was removed
+# 2026-08-24 to stop the bot from auto-restarting; run this workflow
+# by hand (Actions tab -> Workout Bot -> Run workflow) when needed.
 on:
-  schedule:
-    - cron: "0 */5 * * *"   # restart every 5 hours (before 6h job limit)
-  workflow_dispatch:          # manual trigger from GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   run-bot:
